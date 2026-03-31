@@ -412,10 +412,43 @@ function CTABanner({ setPage }) {
 
 function ContactForm() {
   const [form, setForm] = useState({ name: "", phone: "", email: "", service: "", message: "" });
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState("idle"); // idle | sending | success | error
 
-  const handleSubmit = () => {
-    setSent(true);
+  const handleSubmit = async () => {
+    // Basic validation — name and phone are required
+    if (!form.name.trim() || !form.phone.trim()) {
+      alert("Please enter your name and phone number.");
+      return;
+    }
+
+    setStatus("sending");
+
+    try {
+      const formData = new FormData();
+      formData.append("access_key", "0d7ec5d9-93d3-461f-b309-2174e0627b0d");
+      formData.append("subject", "New Quote Request — Call Matt Website");
+      formData.append("from_name", "Call Matt Website");
+      formData.append("name", form.name);
+      formData.append("phone", form.phone);
+      formData.append("email", form.email || "Not provided");
+      formData.append("service", form.service || "Not specified");
+      formData.append("message", form.message || "No details provided");
+
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setStatus("success");
+      } else {
+        setStatus("error");
+      }
+    } catch (err) {
+      setStatus("error");
+    }
   };
 
   const inputStyle = {
@@ -424,12 +457,34 @@ function ContactForm() {
     fontSize: 15, background: C.warmWhite, outline: "none", boxSizing: "border-box",
   };
 
-  if (sent) {
+  if (status === "success") {
     return (
       <div style={{ textAlign: "center", padding: 48 }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
         <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, color: C.forest, marginBottom: 10 }}>Message Sent!</h3>
         <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#666" }}>Matt will get back to you shortly — usually within a few hours.</p>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div style={{ textAlign: "center", padding: 48 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠</div>
+        <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, color: C.forest, marginBottom: 10 }}>Something Went Wrong</h3>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#666", marginBottom: 20 }}>Your message didn't go through. Please call Matt directly:</p>
+        <a href={PHONE_HREF} style={{
+          display: "inline-flex", alignItems: "center", gap: 10,
+          background: C.lime, color: C.forest, padding: "14px 28px",
+          borderRadius: 10, fontWeight: 700, fontSize: 16, textDecoration: "none",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          <PhoneIcon /> {PHONE}
+        </a>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#999", marginTop: 16, cursor: "pointer", textDecoration: "underline" }}
+          onClick={() => setStatus("idle")}>
+          Or try submitting again
+        </p>
       </div>
     );
   }
@@ -454,13 +509,15 @@ function ContactForm() {
         <option>Other</option>
       </select>
       <textarea style={{ ...inputStyle, minHeight: 100, resize: "vertical" }} placeholder="Tell us about your project..." value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} />
-      <button onClick={handleSubmit} style={{
-        background: C.lime, color: C.forest, padding: "16px 32px",
+      <button onClick={handleSubmit} disabled={status === "sending"} style={{
+        background: status === "sending" ? C.sage : C.lime, color: C.forest, padding: "16px 32px",
         borderRadius: 10, fontWeight: 700, fontSize: 16, border: "none",
-        cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+        cursor: status === "sending" ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif",
         boxShadow: "0 4px 16px rgba(139,195,74,0.25)",
+        opacity: status === "sending" ? 0.7 : 1,
+        transition: "all 0.2s ease",
       }}>
-        Get Your Free Quote
+        {status === "sending" ? "Sending..." : "Get Your Free Quote"}
       </button>
       <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#999", textAlign: "center" }}>
         We typically respond within a few hours.
